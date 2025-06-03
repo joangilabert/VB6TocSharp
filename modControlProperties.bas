@@ -1,6 +1,7 @@
 Attribute VB_Name = "modControlProperties"
 Option Explicit
 
+' control default properties
 Public Function ConvertControlProperty(ByVal Src As String, ByVal vProp As String, ByVal cType As String) As String
 'If IsInStr(vProp, "SetF") Then Stop
   ConvertControlProperty = vProp
@@ -23,6 +24,9 @@ Public Function ConvertControlProperty(ByVal Src As String, ByVal vProp As Strin
       If cType = "VB.ListBox" Then ConvertControlProperty = "Items.Count"
     Case "Default": ConvertControlProperty = "IsDefault"
     Case "Cancel": ConvertControlProperty = "IsCancel"
+    
+    Case "LBound": ConvertControlProperty = "LBound()"
+    Case "UBound": ConvertControlProperty = "UBound()"
       
     Case ""
       Select Case cType
@@ -31,10 +35,10 @@ Public Function ConvertControlProperty(ByVal Src As String, ByVal vProp As Strin
         Case "VB.ComboBox":     ConvertControlProperty = "Text"
         Case "VB.PictureBox":   ConvertControlProperty = "Source"
         Case "VB.Image":        ConvertControlProperty = "Source"
-        Case "VB.ComboBox":     ConvertControlProperty = "Text"
         Case "VB.OptionButton": ConvertControlProperty = "IsChecked"
         Case "VB.CheckBox":     ConvertControlProperty = "IsChecked"
         Case "VB.Frame":        ConvertControlProperty = "Content"
+        Case "VB.Label":        ConvertControlProperty = "Content"
         Case Else:              ConvertControlProperty = "DefaultProperty"
       End Select
   End Select

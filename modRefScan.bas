@@ -1,6 +1,10 @@
 Attribute VB_Name = "modRefScan"
 Option Explicit
 
+' Scans all files and builds the refs.txt file.
+' This refs.txt file is used to determine references outside of your current module (functions, enums, etc).
+' Always do a refscan before converting a new project
+
 Private OutRes As String
 Private cFuncRef_Name As String, cFuncRef_Value As String
 Private cEnuRef_Name As String, cEnumRef_Value As String
@@ -22,12 +26,17 @@ On Error Resume Next
 End Function
 
 Public Function ScanRefs() As Long
-  Dim L, T As String
+  Dim L As Variant, T As String, LL As String
 On Error Resume Next
   OutRes = ""
   ScanRefs = 0
+  
+  OutRes = OutRes & ExtensionRefs()
+  
   For Each L In Split(VBPModules(vbpFile), vbCrLf)
     If L = "" Then GoTo SkipMod
+    LL = Replace(L, ".bas", "")
+    OutRes = OutRes & vbCrLf & LL & ":" & LL & ":Module:"
     ScanRefs = ScanRefs + ScanRefsFile(FilePath(vbpFile) & L)
 SkipMod:
   Next
@@ -55,9 +64,26 @@ SkipForm:
   OutRes = ""
 End Function
 
+Private Function ExtensionRefs() As String
+  Dim OutRes As String
+'    public enum AlignConstants { vbAlignNone = 0, vbAlignTop = 1, vbAlignBottom = 2, vbAlignLeft = 3, vbAlignRight = 4, vbLeftJustify = 5, vbRightJustify = 6, vbCenter = 7 }
+  OutRes = OutRes & vbCrLf & "VBConstants:vbAlignNone:Enum:AlignConstants.vbAlignNone"
+  OutRes = OutRes & vbCrLf & "VBConstants:vbAlignTop:Enum:AlignConstants.vbAlignTop"
+  OutRes = OutRes & vbCrLf & "VBConstants:vbAlignBottom:Enum:AlignConstants.vbAlignBottom"
+  OutRes = OutRes & vbCrLf & "VBConstants:vbAlignLeft:Enum:AlignConstants.vbAlignLeft"
+  OutRes = OutRes & vbCrLf & "VBConstants:vbAlignRight:Enum:AlignConstants.vbAlignRight"
+  OutRes = OutRes & vbCrLf & "VBConstants:vbLeftJustify:Enum:AlignConstants.vbLeftJustify"
+  OutRes = OutRes & vbCrLf & "VBConstants:vbLeftJustify:Enum:AlignConstants.vbLeftJustify"
+  OutRes = OutRes & vbCrLf & "VBConstants:vbRightJustify:Enum:AlignConstants.vbRightJustify"
+  OutRes = OutRes & vbCrLf & "VBConstants:vbCenter:Enum:AlignConstants.vbCenter"
+
+'    public enum AlignmentConstants : byte { vbLeftJustify = 0, vbRightJustify = 1, vbCenter = 2 }
+'  Can't really represent these..  The names conflict with above.
+End Function
+
 Private Function ScanRefsFile(ByVal FN As String) As Long
   Dim M As String
-  Dim S As String, L As String, LL
+  Dim S As String, L As String, LL As Variant
   Dim F As String, G As String
   Dim Cont As Boolean, DoCont As Boolean
   Dim CurrEnum As String
@@ -98,6 +124,21 @@ Private Function ScanRefsFile(ByVal FN As String) As Long
       F = M & ":" & G & ":Function:" & F
       OutRes = OutRes & vbCrLf & F
       ScanRefsFile = ScanRefsFile + 1
+    ElseIf tLMatch(L, "Private Function ") Or _
+       tLMatch(L, "Private Sub ") Or _
+       False Then
+      
+      F = Trim(L)
+      F = Trim(nextBy(F, ":"))
+      
+      G = F
+      If tLMatch(G, "Private Function ") Then G = Mid(G, 17)
+      If tLMatch(G, "Private Sub ") Then G = Mid(G, 12)
+      G = nextBy(G, "(")
+      
+      F = M & ":" & Trim(M) & "." & Trim(G) & ":Private Function:" & F
+      OutRes = OutRes & vbCrLf & F
+      ScanRefsFile = ScanRefsFile + 1
     ElseIf tLMatch(L, "Declare ") Or tLMatch(L, "Public Decalre ") Then
       L = LTrim(L)
       If LMatch(L, "Public ") Then L = Mid(L, 8)
@@ -136,7 +177,7 @@ End Function
 
 
 Private Sub InitFuncs()
-  Dim S As String, L
+  Dim S As String, L As Variant
   If Dir(RefList) = "" Then ScanRefs
   If Not (Funcs Is Nothing) Then Exit Sub
   S = ReadEntireFile(RefList)
@@ -148,7 +189,7 @@ On Error Resume Next
   InitLocalFuncs
 End Sub
 
-Public Sub InitLocalFuncs(Optional ByVal S As String)
+Public Sub InitLocalFuncs(Optional ByVal S As String = "")
 On Error Resume Next
   Dim L As Variant
   Set LocalFuncs = New Collection
@@ -157,48 +198,60 @@ On Error Resume Next
   Next
 End Sub
 
-Public Function FuncRef(ByVal FName As String) As String
-  If FName = cFuncRef_Name Then
+Public Function FuncRef(ByVal fName As String) As String
+  If fName = cFuncRef_Name Then
     FuncRef = cFuncRef_Value
     Exit Function
   End If
   
   InitFuncs
 On Error Resume Next
-  FuncRef = Funcs(FName)
-  If FuncRef = "" Then FuncRef = LocalFuncs(FName)
+  FuncRef = Funcs(fName)
+  If FuncRef = "" Then FuncRef = LocalFuncs(fName)
   
-  cFuncRef_Name = FName
+  cFuncRef_Name = fName
   cFuncRef_Value = FuncRef
 End Function
 
-Public Function FuncRefModule(ByVal FName As String) As String
-  FuncRefModule = nextBy(FuncRef(FName), ":")
+Public Function FuncRefModule(ByVal fName As String) As String
+  FuncRefModule = nextBy(FuncRef(fName), ":")
 End Function
 
-Public Function FuncRefEntity(ByVal FName As String) As String
-  FuncRefEntity = nextBy(FuncRef(FName), ":", 3)
+Public Function FuncRefEntity(ByVal fName As String) As String
+  FuncRefEntity = nextBy(FuncRef(fName), ":", 3)
 End Function
 
-Public Function FuncRefDecl(ByVal FName As String) As String
-  FuncRefDecl = nextBy(FuncRef(FName), ":", 4)
+Public Function FuncRefDecl(ByVal fName As String) As String
+  FuncRefDecl = nextBy(FuncRef(fName), ":", 4)
 End Function
 
-Public Function IsFuncRef(ByVal FName As String) As Boolean
-  IsFuncRef = FuncRef(FName) <> "" And FuncRefEntity(FName) = "Function"
+Public Function IsFuncRef(ByVal fName As String) As Boolean
+  IsFuncRef = FuncRef(fName) <> "" And FuncRefEntity(fName) = "Function"
 End Function
 
-Public Function IsEnumRef(ByVal FName As String) As Boolean
-  IsEnumRef = FuncRef(FName) <> "" And FuncRefEntity(FName) = "Enum"
+Public Function IsPrivateFuncRef(ByVal Module As String, ByVal fName As String) As Boolean
+  Dim TName As String
+  TName = Trim(Module) & "." & Trim(fName)
+  IsPrivateFuncRef = FuncRef(TName) <> "" And FuncRefEntity(TName) = "Private Function"
 End Function
 
-Public Function IsFormRef(ByVal FName As String) As Boolean
+Public Function IsEnumRef(ByVal fName As String) As Boolean
+  IsEnumRef = FuncRef(fName) <> "" And FuncRefEntity(fName) = "Enum"
+End Function
+
+Public Function IsFormRef(ByVal fName As String) As Boolean
   Dim T As String
-  T = SplitWord(FName, 1, ".")
+  T = SplitWord(fName, 1, ".")
   IsFormRef = FuncRef(T) <> "" And FuncRefEntity(T) = "Form"
 End Function
 
-Public Function IsControlRef(ByVal Src As String, Optional ByVal FormName As String) As Boolean
+Public Function IsModuleRef(ByVal fName As String) As Boolean
+  Dim T As String
+  T = SplitWord(fName, 1, ".")
+  IsModuleRef = FuncRef(T) <> "" And FuncRefEntity(T) = "Module"
+End Function
+
+Public Function IsControlRef(ByVal Src As String, Optional ByVal FormName As String = "") As Boolean
   Dim Tok As String, Tok2 As String
   Dim FTok As String, TTok As String
   Tok = RegExNMatch(Src, patToken)
@@ -211,34 +264,49 @@ Public Function IsControlRef(ByVal Src As String, Optional ByVal FormName As Str
   End If
 End Function
 
-
-Public Function FuncRefDeclTyp(ByVal FName As String) As String
-  FuncRefDeclTyp = SplitWord(FuncRefDecl(FName), 1)
+Public Function FormControlRefDeclType(ByVal Src As String, Optional ByVal FormName As String = "") As String
+  Dim Tok As String, Tok2 As String
+  Dim FTok As String, TTok As String
+  Tok = RegExNMatch(Src, patToken)
+  Tok2 = RegExNMatch(Src, patToken, 1)
+  TTok = Tok & "." & Tok2
+  FTok = FormName & "." & Tok
+'If IsInStr(Src, "SetFocus") Then Stop
+  If FuncRef(TTok) <> "" And FuncRefEntity(TTok) = "Control" Then
+    FormControlRefDeclType = FuncRefDecl(TTok)
+  ElseIf FuncRef(FTok) <> "" And FuncRefEntity(FTok) = "Control" Then
+    FormControlRefDeclType = FuncRefDecl(FTok)
+  End If
 End Function
 
-Public Function FuncRefDeclRet(ByVal FName As String) As String
-  FuncRefDeclRet = FuncRefDecl(FName)
+
+Public Function FuncRefDeclTyp(ByVal fName As String) As String
+  FuncRefDeclTyp = SplitWord(FuncRefDecl(fName), 1)
+End Function
+
+Public Function FuncRefDeclRet(ByVal fName As String) As String
+  FuncRefDeclRet = FuncRefDecl(fName)
   FuncRefDeclRet = Trim(Mid(FuncRefDeclRet, InStrRev(FuncRefDeclRet, " ")))
   If Right(FuncRefDeclRet, 1) = ")" And Right(FuncRefDeclRet, 2) <> "()" Then FuncRefDeclRet = ""
 End Function
 
-Public Function FuncRefDeclArgs(ByVal FName As String) As String
+Public Function FuncRefDeclArgs(ByVal fName As String) As String
 On Error Resume Next
-  FuncRefDeclArgs = FuncRefDecl(FName)
+  FuncRefDeclArgs = FuncRefDecl(fName)
   FuncRefDeclArgs = Mid(FuncRefDeclArgs, InStr(FuncRefDeclArgs, "(") + 1)
   FuncRefDeclArgs = Left(FuncRefDeclArgs, InStrRev(FuncRefDeclArgs, ")") - 1)
   FuncRefDeclArgs = Trim(FuncRefDeclArgs)
 End Function
 
-Public Function FuncRefDeclArgN(ByVal FName As String, ByVal N As Long) As String
+Public Function FuncRefDeclArgN(ByVal fName As String, ByVal N As Long) As String
   Dim F As String
-  F = FuncRefDeclArgs(FName)
+  F = FuncRefDeclArgs(fName)
   FuncRefDeclArgN = nextBy(F, ", ", N)
 End Function
 
-Public Function FuncRefDeclArgCnt(ByVal FName As String) As Long
+Public Function FuncRefDeclArgCnt(ByVal fName As String) As Long
   Dim F As String, K As String
-  F = FuncRefDeclArgs(FName)
+  F = FuncRefDeclArgs(fName)
   FuncRefDeclArgCnt = 0
   Do
     K = nextBy(F, ", ", FuncRefDeclArgCnt + 1)
@@ -247,39 +315,39 @@ Public Function FuncRefDeclArgCnt(ByVal FName As String) As Long
   Loop While True
 End Function
 
-Public Function FuncRefArgType(ByVal FName As String, ByVal N As Long) As String
-  FuncRefArgType = FuncRefDeclArgN(FName, N)
+Public Function FuncRefArgType(ByVal fName As String, ByVal N As Long) As String
+  FuncRefArgType = FuncRefDeclArgN(fName, N)
   If FuncRefArgType = "" Then Exit Function
   FuncRefArgType = SplitWord(FuncRefArgType, 2, " As ")
 End Function
 
-Public Function FuncRefArgByRef(ByVal FName As String, ByVal N As Long) As Boolean
-  FuncRefArgByRef = Not IsInStr(FuncRefDeclArgN(FName, N), "ByVal ")
+Public Function FuncRefArgByRef(ByVal fName As String, ByVal N As Long) As Boolean
+  FuncRefArgByRef = Not IsInStr(FuncRefDeclArgN(fName, N), "ByVal ")
 End Function
 
-Public Function FuncRefArgOptional(ByVal FName As String, ByVal N As Long) As Boolean
-  FuncRefArgOptional = IsInStr(FuncRefDeclArgN(FName, N), "Optional ")
+Public Function FuncRefArgOptional(ByVal fName As String, ByVal N As Long) As Boolean
+  FuncRefArgOptional = IsInStr(FuncRefDeclArgN(fName, N), "Optional ")
 End Function
 
-Public Function FuncRefArgDefault(ByVal FName As String, ByVal N As Long) As String
+Public Function FuncRefArgDefault(ByVal fName As String, ByVal N As Long) As String
   Dim aTyp As String
-  If Not FuncRefArgOptional(FName, N) Then Exit Function
-  FuncRefArgDefault = SplitWord(FuncRefDeclArgN(FName, N), 2, " = ", True, True)
-  If FuncRefArgDefault = "" Then FuncRefArgDefault = ConvertDefaultDefault(FuncRefArgType(FName, N))
+  If Not FuncRefArgOptional(fName, N) Then Exit Function
+  FuncRefArgDefault = SplitWord(FuncRefDeclArgN(fName, N), 2, " = ", True, True)
+  If FuncRefArgDefault = "" Then FuncRefArgDefault = ConvertDefaultDefault(FuncRefArgType(fName, N))
 End Function
 
 Public Function EnumRefRepl(ByVal EName As String) As String
   EnumRefRepl = FuncRefDecl(EName)
 End Function
 
-Public Function FormRefRepl(ByVal FName As String) As String
+Public Function FormRefRepl(ByVal fName As String) As String
   Dim T As String, U As String
-  T = SplitWord(FName, 1, ".")
+  T = SplitWord(fName, 1, ".")
   U = FuncRefModule(T) & ".instance"
-  FormRefRepl = Replace(FName, T, U)
+  FormRefRepl = Replace(fName, T, U)
 End Function
 
-Public Function FormControlRepl(ByVal Src As String, Optional ByVal FormName As String) As String
+Public Function FormControlRepl(ByVal Src As String, Optional ByVal FormName As String = "") As String
   Dim Tok As String, Tok2 As String, Tok3 As String
   Dim F As String, V As String
   Tok = RegExNMatch(Src, patToken)

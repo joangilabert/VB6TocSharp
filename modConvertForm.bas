@@ -1,10 +1,13 @@
 Attribute VB_Name = "modConvertForm"
 Option Explicit
 
+' Convert a given form to the xaml
+
 Private EventStubs As String
+Public FormControlArrays As String
 
 Public Function Frm2Xml(ByVal F As String) As String
-  Dim Sp, L, I As Long
+  Dim Sp() As String, L As Variant, I As Long
   Dim R As String
   Sp = Split(F, vbCrLf)
   
@@ -26,8 +29,8 @@ NextLine:
   Frm2Xml = R
 End Function
 
-Public Function FormControls(ByVal Src As String, ByVal F As String, Optional ByVal asLocal As Boolean = True)
-  Dim Sp, L, I As Long
+Public Function FormControls(ByVal Src As String, ByVal F As String, Optional ByVal asLocal As Boolean = True) As String
+  Dim Sp() As String, L As Variant, I As Long
   Dim R As String, T As String
   Dim Nm As String, Ty As String
   Sp = Split(F, vbCrLf)
@@ -51,8 +54,8 @@ NextLine:
 End Function
 
 Public Function ConvertFormUi(ByVal F As String, ByVal CodeSection As String) As String
-  Dim Stck(0 To 100)
-  Dim Sp, L, J As Long, K As Long, I As Long, Tag As String
+  Dim Stck(0 To 100) As String
+  Dim Sp() As String, L As Variant, J As Long, K As Long, I As Long, Tag As String
   Dim M As String
   Dim R As String
   Dim Prefix As String
@@ -60,6 +63,7 @@ Public Function ConvertFormUi(ByVal F As String, ByVal CodeSection As String) As
   Sp = Split(F, vbCrLf)
   
   EventStubs = ""
+  FormControlArrays = ""
   
   For K = LBound(Sp) To UBound(Sp)
     L = Trim(Sp(K))
@@ -115,7 +119,7 @@ Private Function ConvertProperty(ByVal S As String) As String
 End Function
 
 Private Function StartControl(ByVal L As String, ByVal Props As Collection, ByVal DoEmpty As Boolean, ByVal Code As String, ByRef TagType As String) As String
-  Dim cType As String, cName As String, cIndex As String
+  Dim cType As String, oName As String, cName As String, cIndex As String
   Dim tType As String, tCont As Boolean, tDef As String, Features As String
   Dim S As String, N As String, M As String
   Dim V As String
@@ -123,11 +127,16 @@ Private Function StartControl(ByVal L As String, ByVal Props As Collection, ByVa
   TagType = ""
   
   cType = SplitWord(L, 2)
-  cName = SplitWord(L, 3)
+  oName = SplitWord(L, 3)
   cIndex = cValP(Props, "Index")
-  If cIndex <> "" Then cName = cName & "_" & cIndex
-  
   ControlData cType, tType, tCont, tDef, Features
+  If cIndex <> "" Then
+    If InStr(FormControlArrays, "[" & oName & ",") = 0 Then FormControlArrays = FormControlArrays & "[" & oName & "," & tType & "]"
+    cName = oName & "_" & cIndex
+  Else
+    cName = oName
+  End If
+  
   
   S = ""
 On Error Resume Next
@@ -228,7 +237,7 @@ On Error Resume Next
   StartControl = S
 End Function
 
-Public Function CheckControlEvents(ByVal ControlType As String, ByVal ControlName As String, Optional ByVal CodeSection As String) As String
+Public Function CheckControlEvents(ByVal ControlType As String, ByVal ControlName As String, Optional ByVal CodeSection As String = "") As String
   Dim Res As String
   Dim HasClick As Boolean, HasFocus As Boolean, HasChange As Boolean, IsWindow As Boolean
   HasClick = True
@@ -260,7 +269,7 @@ Public Function CheckControlEvents(ByVal ControlType As String, ByVal ControlNam
   CheckControlEvents = Res
 End Function
 
-Public Function CheckEvent(ByVal EventName As String, ByVal ControlName As String, ByVal ControlType As String, Optional ByVal CodeSection As String) As String
+Public Function CheckEvent(ByVal EventName As String, ByVal ControlName As String, ByVal ControlType As String, Optional ByVal CodeSection As String = "") As String
   Dim Search As String, Target As String, N As String
   Dim L As Long, V As String
   N = ControlName & "_" & EventName
@@ -285,7 +294,7 @@ End Function
 Public Function EndControl(ByVal tType As String) As String
   Select Case tType
     Case "Line", "Shape", "Timer":
-                          EndControl = ""
+      EndControl = ""
     Case "Window":        EndControl = " </Grid>" & vbCrLf & "</Window>"
     Case "GroupBox":      EndControl = "</Grid> </GroupBox>"
     Case Else:            EndControl = "</" & tType & ">"
@@ -297,18 +306,18 @@ Public Function IsEvent(ByVal Str As String) As Boolean
   IsEvent = EventStub(Str) <> ""
 End Function
 
-Public Function EventStub(ByVal FName As String) As String
+Public Function EventStub(ByVal fName As String) As String
   Dim S As String, C As String, K As String
 
-  C = SplitWord(FName, 1, "_")
-  K = SplitWord(FName, 2, "_")
+  C = SplitWord(fName, 1, "_")
+  K = SplitWord(fName, 2, "_")
   Select Case K
     Case "Click", "DblClick", "Load", "GotFocus", "LostFocus"
-      S = "private void " & FName & "(object sender, RoutedEventArgs e) { " & FName & "(); }" & vbCrLf
+      S = "private void " & fName & "(object sender, RoutedEventArgs e) { " & fName & "(); }" & vbCrLf
     Case "Change"
-      S = "private void " & C & "_Change(object sender, System.Windows.Controls.TextChangedEventArgs e) { " & FName & "(); }" & vbCrLf
+      S = "private void " & C & "_Change(object sender, System.Windows.Controls.TextChangedEventArgs e) { " & fName & "(); }" & vbCrLf
     Case "QueryUnload"
-    S = "private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e) { int c = 0, u = 0 ;  " & FName & "(out c, ref u); e.Cancel = c != 0;  }" & vbCrLf
+      S = "private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e) { int c = 0, u = 0 ;  " & fName & "(out c, ref u); e.Cancel = c != 0;  }" & vbCrLf
 '      V = " long doCancel; long UnloadMode; " & FName & "(ref doCancel, ref UnloadMode);"
     Case "Validate", "Unload"
 '      V = "long doCancel; " & FName & "(ref doCancel);"

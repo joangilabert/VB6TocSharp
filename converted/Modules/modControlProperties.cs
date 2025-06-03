@@ -1,73 +1,108 @@
-using VB6 = Microsoft.VisualBasic.Compatibility.VB6;
-using System.Runtime.InteropServices;
-using static VBExtension;
-using static VBConstants;
-using Microsoft.VisualBasic;
-using System;
-using System.Windows;
-using System.Windows.Controls;
-using static System.DateTime;
-using static System.Math;
-using static Microsoft.VisualBasic.Globals;
-using static Microsoft.VisualBasic.Collection;
-using static Microsoft.VisualBasic.Constants;
-using static Microsoft.VisualBasic.Conversion;
-using static Microsoft.VisualBasic.DateAndTime;
-using static Microsoft.VisualBasic.ErrObject;
-using static Microsoft.VisualBasic.FileSystem;
-using static Microsoft.VisualBasic.Financial;
-using static Microsoft.VisualBasic.Information;
-using static Microsoft.VisualBasic.Interaction;
-using static Microsoft.VisualBasic.Strings;
-using static Microsoft.VisualBasic.VBMath;
-using System.Collections.Generic;
-using static Microsoft.VisualBasic.PowerPacks.Printing.Compatibility.VB6.ColorConstants;
-using static Microsoft.VisualBasic.PowerPacks.Printing.Compatibility.VB6.DrawStyleConstants;
-using static Microsoft.VisualBasic.PowerPacks.Printing.Compatibility.VB6.FillStyleConstants;
-using static Microsoft.VisualBasic.PowerPacks.Printing.Compatibility.VB6.GlobalModule;
-using static Microsoft.VisualBasic.PowerPacks.Printing.Compatibility.VB6.Printer;
-using static Microsoft.VisualBasic.PowerPacks.Printing.Compatibility.VB6.PrinterCollection;
-using static Microsoft.VisualBasic.PowerPacks.Printing.Compatibility.VB6.PrinterObjectConstants;
-using static Microsoft.VisualBasic.PowerPacks.Printing.Compatibility.VB6.ScaleModeConstants;
-using static Microsoft.VisualBasic.PowerPacks.Printing.Compatibility.VB6.SystemColorConstants;
-using ADODB;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
-
-using VB2CS.Forms;
-using static modUtils;
-using static modConvert;
-using static modProjectFiles;
-using static modTextFiles;
-using static modRegEx;
-using static frmTest;
-using static modConvertForm;
-using static modSubTracking;
-using static modVB6ToCS;
-using static modUsingEverything;
-using static modSupportFiles;
-using static modConfig;
-using static modRefScan;
-using static modConvertUtils;
-using static modControlProperties;
-using static modProjectSpecific;
-using static modINI;
-using static modLinter;
-using static VB2CS.Forms.frm;
-using static VB2CS.Forms.frmConfig;
+static class modControlProperties
+{
+    // Option Explicit
 
 
-static class modControlProperties {
-// Option Explicit
+    public static string ConvertControlProperty(string Src_UNUSED, string vProp, string cType)
+    {
+        string ConvertControlProperty = "";
+        //If IsInStr(vProp, "SetF") Then Stop
+        ConvertControlProperty = vProp;
+        switch (vProp)
+        {
+            case "ListIndex":
+                ConvertControlProperty = "SelectedIndex";
+                break;
+            case "Visible":
+                ConvertControlProperty = "Visibility";
+                break;
+            case "Enabled":
+                ConvertControlProperty = "IsEnabled";
+                break;
+            case "TabStop":
+                ConvertControlProperty = "IsTabStop";
+                break;
+            case "SelStart":
+                ConvertControlProperty = "SelectionStart";
+                break;
+            case "SelLength":
+                ConvertControlProperty = "SelectionLength";
+                break;
+            case "Caption":
+                if (cType == "VB.Label")
+                {
+                    ConvertControlProperty = "Content";
+                }
+                break;
+            case "Value":
+                if (cType == "VB.CheckBox")
+                {
+                    ConvertControlProperty = "IsChecked";
+                }
+                if (cType == "VB.OptionButton")
+                {
+                    ConvertControlProperty = "IsChecked";
+                }
+                if (cType == "MSComCtl2.DTPicker")
+                {
+                    ConvertControlProperty = "DisplayDate";
+                }
+                break;
+            case "Text":
+                if (cType == "VB.ListBox")
+                {
+                    ConvertControlProperty = "SelectedText.toString()";
+                }
+                break;
+            case "ListCount":
+                if (cType == "VB.ListBox")
+                {
+                    ConvertControlProperty = "Items.Count";
+                }
+                break;
+            case "Default":
+                ConvertControlProperty = "IsDefault";
+                break;
+            case "Cancel":
+                ConvertControlProperty = "IsCancel";
+
+                break;
+            case "":
+                switch (cType)
+                {
+                    case "VB.Caption":
+                        ConvertControlProperty = "Content";
+                        break;
+                    case "VB.TextBox":
+                        ConvertControlProperty = "Text";
+                        break;
+                    case "VB.ComboBox":
+                        ConvertControlProperty = "Text";
+                        break;
+                    case "VB.PictureBox":
+                        ConvertControlProperty = "Source";
+                        break;
+                    case "VB.Image":
+                        ConvertControlProperty = "Source";
+                        break;
+                    case "VB.ComboBox":
+                        ConvertControlProperty = "Text";
+                        break;
+                    case "VB.OptionButton":
+                        ConvertControlProperty = "IsChecked";
+                        break;
+                    case "VB.CheckBox":
+                        ConvertControlProperty = "IsChecked";
+                        break;
+                    case "VB.Frame":
+                        ConvertControlProperty = "Content";
+                        break;
+                    default:
+                        ConvertControlProperty = "DefaultProperty";
+                        break;
+                }
+                break;
+        }
+        return ConvertControlProperty;
+    }
 }

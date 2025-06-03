@@ -1,6 +1,7 @@
 Attribute VB_Name = "modUtils"
 Option Explicit
 
+' Common functions for use throughout project
 
 Public Const patToken As String = "([a-zA-Z_][a-zA-Z_0-9]*)"
 Public Const patNotToken As String = "([^a-zA-Z_0-9])"
@@ -11,18 +12,20 @@ Public Const vbCrLf4 As String = vbCrLf & vbCrLf & vbCrLf & vbCrLf
 
 Public Const STR_CHR_UCASE As String = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 Public Const STR_CHR_LCASE As String = "abcdefghijklmnopqrstuvwxyz"
-Public Const STR_CHR_DIGIT As String = "1234567890"
+Public Const STR_CHR_DIGIT As String = "1234567890" ' eol comment
+
 
 Public Function IsInStr(ByVal Src As String, ByVal Find As String) As Boolean: IsInStr = InStr(Src, Find) > 0: End Function
 Public Function IsNotInStr(ByVal S As String, ByVal Fnd As String) As Boolean: IsNotInStr = Not IsInStr(S, Fnd): End Function
-Public Function FileExists(ByVal FN As String) As Boolean: FileExists = Dir(FN) <> "": End Function
-Public Function FileName(ByVal FN As String) As String: FileName = Mid(FN, InStrRev(FN, "\") + 1): End Function
-Public Function FileBaseName(ByVal FN As String) As String: FileBaseName = Left(FileName(FN), InStrRev(FileName(FN), ".") - 1): End Function
+Public Function FileExists(ByVal FN As String) As Boolean: FileExists = FN <> "" And Dir(FN) <> "": End Function
+Public Function DirExists(ByVal FN As String) As Boolean: DirExists = FN <> "" And Dir(FN, vbDirectory) <> "": End Function
+Public Function ProjFileName(ByVal FN As String) As String: ProjFileName = Mid(FN, InStrRev(FN, "\") + 1): End Function
+Public Function FileBaseName(ByVal FN As String) As String: FileBaseName = Left(ProjFileName(FN), InStrRev(ProjFileName(FN), ".") - 1): End Function
 Public Function FilePath(ByVal FN As String) As String: FilePath = Left(FN, InStrRev(FN, "\")): End Function
 Public Function ChgExt(ByVal FN As String, ByVal NewExt As String) As String: ChgExt = Left(FN, InStrRev(FN, ".") - 1) & NewExt: End Function
 Public Function tLeft(ByVal Str As String, ByVal N As Long) As String: tLeft = Left(Trim(Str), N): End Function
 Public Function tMid(ByVal Str As String, ByVal N As Long, Optional ByVal M As Long = 0) As String: tMid = IIf(M = 0, Mid(Trim(Str), N), Mid(Trim(Str), N, M)): End Function
-Public Function StrCnt(ByVal Src As String, ByVal Str As String) As Long: StrCnt = (Len(Src) - Len(Replace(Src, Str, ""))) / Len(Str): End Function
+Public Function StrCnt(ByVal Src As String, ByVal Str As String) As Long: StrCnt = (Len(Src) - Len(Replace(Src, Str, ""))) / IIf(Len(Str) = 0, 1, Len(Str)): End Function
 Public Function LMatch(ByVal Src As String, ByVal tMatch As String) As Boolean: LMatch = Left(Src, Len(tMatch)) = tMatch: End Function
 Public Function tLMatch(ByVal Src As String, ByVal tMatch As String) As Boolean: tLMatch = Left(LTrim(Src), Len(tMatch)) = tMatch: End Function
 Public Function Px(ByVal Twips As Long) As Long:  Px = Twips / 14: End Function
@@ -32,6 +35,21 @@ Public Function Capitalize(ByVal S As String) As String: Capitalize = UCase(Left
 
 Public Function DevelopmentFolder() As String: DevelopmentFolder = App.Path & "\": End Function
 
+' Determine whether you're running in the IDE.  Useful for several things tio know.
+Public Function IsIDE() As Boolean
+  'IsIDE = False
+  'Exit Function
+  
+' works on a very simple princicple... debug statements don't get compiled...
+  On Error GoTo IDEInUse
+  Debug.Print 1 \ 0 'division by zero error
+  IsIDE = False
+  Exit Function
+IDEInUse:
+  IsIDE = True
+End Function
+
+ ' True/False if `S` is in array `K`.
 Public Function IsIn(ByVal S As String, ParamArray K() As Variant) As Boolean
   Dim L As Variant
   For Each L In K
@@ -53,6 +71,7 @@ End Function
 
 Public Function FileExt(ByVal FN As String, Optional ByVal vLCase As Boolean = True) As String
   If FN = "" Then Exit Function
+  If InStr(FN, ".") = 0 Then Exit Function
   FileExt = Mid(FN, InStrRev(FN, "."))
   FileExt = IIf(vLCase, LCase(FileExt), FileExt)
 End Function
@@ -157,7 +176,7 @@ Public Function nextByP(ByVal Src As String, Optional ByVal Del As String = """"
   End If
 End Function
 
-Public Function NextByOp(ByVal Src As String, Optional ByVal Ind As Long = 1, Optional ByRef Op As String) As String
+Public Function NextByOp(ByVal Src As String, Optional ByVal Ind As Long = 1, Optional ByRef Op As String = "") As String
   Dim A As String, S As String, D As String, M As String, C As String, E As String, I As String
   Dim cNE As String, cLT As String, cGT As String, cLE As String, cGE As String, cEQ As String
   Dim lA As String, lO As String, lM As String, LL As String
@@ -245,7 +264,7 @@ Public Function SplitWord(ByVal Source As String, Optional ByVal N As Long = 1, 
 ':  String
 ':::SEE ALSO
 ': Split, CountWords
-  Dim S, I As Long
+  Dim S() As String, I As Long
   N = N - 1
   If Source = "" Then Exit Function
   S = Split(Source, Space)
@@ -277,7 +296,7 @@ Public Function CountWords(ByVal Source As String, Optional ByVal Space As Strin
 ':  String
 ':::SEE ALSO
 ': SplitWord
-  Dim L
+  Dim L As Variant
 ' Count actual words.  Blank spaces don't count, before, after, or in the middle.
 ' Only a simple split and loop--there may be faster ways...
   For Each L In Split(Source, Space)
@@ -285,9 +304,9 @@ Public Function CountWords(ByVal Source As String, Optional ByVal Space As Strin
   Next
 End Function
 
-Public Function ArrSlice(ByRef sourceArray, ByVal fromIndex As Long, ByVal toIndex As Long)
+Public Function ArrSlice(ByRef sourceArray As Variant, ByVal fromIndex As Long, ByVal toIndex As Long) As Variant
   Dim Idx As Long
-  Dim tempList()
+  Dim tempList() As Variant
   
   If Not IsArray(sourceArray) Then Exit Function
   
@@ -301,7 +320,7 @@ Public Function ArrSlice(ByRef sourceArray, ByVal fromIndex As Long, ByVal toInd
   ArrSlice = tempList
 End Function
 
-Public Sub ArrAdd(ByRef Arr(), ByRef Item)
+Public Sub ArrAdd(ByRef Arr() As Variant, ByRef Item As Variant)
   Dim X As Long
   Err.Clear
 On Error Resume Next
@@ -313,11 +332,11 @@ On Error Resume Next
   ReDim Preserve Arr(UBound(Arr) + 1)
   Arr(UBound(Arr)) = Item
 End Sub
-Public Function SubArr(ByVal sourceArray, ByVal fromIndex As Long, ByVal copyLength As Long)
+Public Function SubArr(ByVal sourceArray As Variant, ByVal fromIndex As Long, ByVal copyLength As Long) As Variant
   SubArr = ArrSlice(sourceArray, fromIndex, fromIndex + copyLength - 1)
 End Function
 
-Public Function InRange(ByVal LBnd, ByVal CHK, ByVal UBnd, Optional ByVal IncludeBounds As Boolean = True) As Boolean
+Public Function InRange(ByVal LBnd As Variant, ByVal CHK As Variant, ByVal UBnd As Variant, Optional ByVal IncludeBounds As Boolean = True) As Boolean
 On Error Resume Next  ' because we're doing this as variants..
   If IncludeBounds Then
     InRange = (CHK >= LBnd) And (CHK <= UBnd)
@@ -326,7 +345,7 @@ On Error Resume Next  ' because we're doing this as variants..
   End If
 End Function
 
-Public Function FitRange(ByVal LBnd, ByVal CHK, ByVal UBnd)
+Public Function FitRange(ByVal LBnd As Variant, ByVal CHK As Variant, ByVal UBnd As Variant) As Variant
 On Error Resume Next
   If CHK < LBnd Then
     FitRange = LBnd
@@ -351,7 +370,7 @@ Public Function CodeSectionLoc(ByVal S As String) As Long
   CodeSectionLoc = N
 End Function
 
-Public Function CodeSectionGlobalEndLoc(ByVal S As String)
+Public Function CodeSectionGlobalEndLoc(ByVal S As String) As Long
   Do
     CodeSectionGlobalEndLoc = CodeSectionGlobalEndLoc + RegExNPos(Mid(S, CodeSectionGlobalEndLoc + 1), "([^a-zA-Z0-9_]Function |[^a-zA-Z0-9_]Sub |[^a-zA-Z0-9_]Property )") + 1
     If CodeSectionGlobalEndLoc = 1 Then CodeSectionGlobalEndLoc = Len(S): Exit Function
@@ -373,17 +392,23 @@ Public Function isOperator(ByVal S As String) As Boolean
   End Select
 End Function
 
-Public Sub Prg(Optional ByVal Val As Long = -1, Optional ByVal Max As Long = -1, Optional ByVal Cap = "#")
+Public Sub Prg(Optional ByVal Val As Long = -1, Optional ByVal Max As Long = -1, Optional ByVal Cap As String = "#")
+  Dim L As Variant, Found As Boolean
+  For Each L In Forms
+    If L.Name = "frm" Then Found = True: Exit For
+  Next
+  If Not Found Then Exit Sub
+
   frm.Prg Val, Max, Cap
 End Sub
 
-Public Function cVal(ByRef Coll As Collection, Key As String, Optional ByVal Def As String = "") As String
+Public Function cVal(ByRef Coll As Collection, ByVal Key As String, Optional ByVal Def As String = "") As String
   On Error Resume Next
   cVal = Def
   cVal = Coll.Item(LCase(Key))
 End Function
 
-Public Function cValP(Coll As Collection, Key As String, Optional ByVal Def As String = "") As String
+Public Function cValP(ByRef Coll As Collection, ByVal Key As String, Optional ByVal Def As String = "") As String
   cValP = P(deQuote(cVal(Coll, Key, Def)))
 End Function
 
@@ -402,7 +427,7 @@ Public Function ModuleName(ByVal S As String) As String
   ModuleName = Mid(S, J, K)
 End Function
 
-Public Function IsInCode(ByVal Src As String, ByVal N As Long)
+Public Function IsInCode(ByVal Src As String, ByVal N As Long) As Boolean
   Dim I As Long, C As String
   Dim Qu As Boolean
   IsInCode = False
@@ -455,8 +480,10 @@ Public Function QuoteXML(ByVal S As String) As String
   QuoteXML = Quote(QuoteXML)
 End Function
 
-
-Public Function ReduceString(ByVal Src As String, Optional ByVal Allowed As String, Optional ByVal Subst As String = "-", Optional ByVal MaxLen As Long = 0, Optional ByVal bLCase As Boolean = True) As String
+Public Function ReduceString( _
+  ByVal Src As String, Optional ByVal Allowed As String = "", Optional ByVal Subst As String = "-", _
+  Optional ByVal MaxLen As Long = 0, Optional ByVal bLCase As Boolean = True _
+  ) As String
 '::::ReduceString
 ':::SUMMARY
 ': Reduces a string by removing non-allowed characters, optionally replacing them with a substitute.
@@ -500,3 +527,22 @@ Public Function ReduceString(ByVal Src As String, Optional ByVal Allowed As Stri
   If bLCase Then ReduceString = LCase(ReduceString)
 End Function
 
+Public Function ReorderParams(ByVal S As String, ByRef Adjustments As Variant) As String
+  Dim Parts() As String, NewParts() As String
+  Dim I As Long
+  ReorderParams = S
+On Error GoTo Failure
+
+  Parts = Split(S, ",")
+  ReDim NewParts(LBound(Adjustments) To UBound(Adjustments))
+  For I = 0 To UBound(Adjustments)
+    NewParts(I) = Parts(Adjustments(I))
+  Next
+  
+  ReorderParams = Join(NewParts, ",")
+Failure:
+End Function
+
+Public Function ValueIsSimple(ByVal S As String) As Boolean
+  ValueIsSimple = RegExTest(Trim(S), "^[a-zA-Z][a-zA-Z0-9]*$")
+End Function

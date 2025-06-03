@@ -1,13 +1,16 @@
 Attribute VB_Name = "modUsingEverything"
 Option Explicit
 
+' Provide a mechanism to add a using for everything pertinent to every CS file.
+
 Private Everything As String
 Private Const VB6Compat As String = "Microsoft.VisualBasic.Compatibility.VB6"
 
 
-Public Function UsingEverything(Optional ByVal PackageName As String) As String
+' Returns preamble for every CS file generated.
+Public Function UsingEverything(Optional ByVal PackageName As String = "") As String
   Dim List As String, Path As String, Name As String
-  Dim E As String, L
+  Dim E As String, L As Variant
   Dim R As String, N As String, M As String
   E = ""
   R = "": N = vbCrLf: M = ""
@@ -29,6 +32,7 @@ Public Function UsingEverything(Optional ByVal PackageName As String) As String
     E = E & N & "using System.Windows.Controls;"
     E = E & N & "using static System.DateTime;"
     E = E & N & "using static System.Math;"
+    E = E & N & "using System.Linq;"
     
     E = E & N & "using static Microsoft.VisualBasic.Globals;"
     E = E & N & "using static Microsoft.VisualBasic.Collection;"
@@ -86,12 +90,12 @@ Public Function UsingEverything(Optional ByVal PackageName As String) As String
         E = E & N & "using static " & AssemblyName & ".Forms." & Name & ";"
       End If
     Next
-'    For Each L In Split(VBPClasses(vbpFile), vbCrLf)  ' controls?
-'      If L <> "" Then
-'        Name = ModuleName(ReadEntireFile(Path & L))
-'        E = E & N & "using " & PackagePrefix & Name & ";"
-'      End If
-'    Next
+    For Each L In Split(VBPClasses(vbpFile), vbCrLf)
+      If L <> "" Then
+        Name = ModuleName(ReadEntireFile(Path & L))
+        E = E & N & "using static " & AssemblyName & ".Classes." & Name & ";"
+      End If
+    Next
     Everything = E
   End If
   

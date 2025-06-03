@@ -1,18 +1,22 @@
 Attribute VB_Name = "modRegEx"
 Option Explicit
 
+' Simple regex tools for linting / converting
+
 Private mRegEx As Object
 Private Property Get RegEx() As Object
   If mRegEx Is Nothing Then Set mRegEx = CreateObject("vbscript.regexp"): mRegEx.Global = True
   Set RegEx = mRegEx
 End Property
 
+' Return true/false if regex pattern `Find` is found in `Src`.
 Public Function RegExTest(ByVal Src As String, ByVal Find As String) As Boolean
 On Error Resume Next
   RegEx.Pattern = Find
-  RegExTest = RegEx.Test(Src)
+  RegExTest = RegEx.test(Src)
 End Function
 
+' Return number of instances of pattern `Find` in `Src`.
 Public Function RegExCount(ByVal Src As String, ByVal Find As String) As Long
 On Error Resume Next
   RegEx.Pattern = Find
@@ -44,24 +48,24 @@ On Error Resume Next
   RegExReplace = RegEx.Replace(Src, Repl)
 End Function
 
-Public Function RegExSplit(ByVal szStr As String, ByVal szPattern As String)
+Public Function RegExSplit(ByVal szStr As String, ByVal szPattern As String) As Variant
 On Error Resume Next
-  Dim oAl, oRe, oMatches
+  Dim oAl As Variant, oRe As Variant, oMatches As Variant
   Set oRe = RegEx
   oRe.Pattern = "^(.*)(" & szPattern & ")(.*)$"
   oRe.IgnoreCase = True
   oRe.Global = True
   Set oAl = CreateObject("System.Collections.ArrayList")
   
-  Do
-      Set oMatches = oRe.Execute(szStr)
-      If oMatches.Count > 0 Then
-          oAl.Add oMatches(0).SubMatches(2)
-          szStr = oMatches(0).SubMatches(0)
-      Else
-          oAl.Add szStr
-          Exit Do
-      End If
+  Do While True
+    Set oMatches = oRe.Execute(szStr)
+    If oMatches.Count > 0 Then
+      oAl.Add oMatches(0).SubMatches(2)
+      szStr = oMatches(0).SubMatches(0)
+    Else
+      oAl.Add szStr
+      Exit Do
+    End If
   Loop
   oAl.Reverse
   RegExSplit = oAl.ToArray
@@ -69,7 +73,7 @@ End Function
 
 Public Function RegExSplitCount(ByVal szStr As String, ByVal szPattern As String) As Long
 On Error Resume Next
-  Dim T()
+  Dim T() As Variant
   T = RegExSplit(szStr, szPattern)
   RegExSplitCount = UBound(T) - LBound(T) + 1
 End Function

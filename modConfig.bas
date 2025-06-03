@@ -1,6 +1,8 @@
 Attribute VB_Name = "modConfig"
 Option Explicit
 
+' project config.  Handles reading/writing INI file, etc, and access to those values.
+
 Public Const SpIndent As Long = 2
 Public Const DefaultDataType As String = "dynamic"
 
@@ -14,17 +16,29 @@ Private mOutputFolder As String
 Private mAssemblyName As String
 
 Private Loaded As Boolean
+Public Hush As Boolean
 
 Public Const INISection_Settings   As String = "Settings"
 Public Const INIKey_VBPFile As String = "VBPFile"
 Public Const INIKey_OutputFolder As String = "OutputFolder"
 Public Const INIKey_AssemblyName As String = "AssemblyName"
 
-Public Function INIFile() As String
-  INIFile = App.Path & "\VB6toCS.INI"
-End Function
 
-Public Sub LoadSettings(Optional ByVal Force As Boolean)
+Public Property Get vbpFile() As String
+  LoadSettings
+  If mVBPFile = "" Then mVBPFile = def_vbpFile
+  vbpFile = mVBPFile
+End Property
+
+Public Property Get vbpPath() As String
+  vbpPath = FilePath(vbpFile)
+End Property
+
+Public Property Get INIFile() As String
+  INIFile = App.Path & "\VB6toCS.INI"
+End Property
+
+Public Sub LoadSettings(Optional ByVal Force As Boolean = False)
   If Loaded And Not Force Then Exit Sub
   Loaded = True
   mVBPFile = modINI.INIRead(INISection_Settings, INIKey_VBPFile, INIFile)
@@ -32,13 +46,19 @@ Public Sub LoadSettings(Optional ByVal Force As Boolean)
   mAssemblyName = modINI.INIRead(INISection_Settings, INIKey_AssemblyName, INIFile)
 End Sub
 
-Public Function OutputFolder(Optional ByVal F As String) As String
+Public Function OutputFolder(Optional ByVal F As String = "") As String
   LoadSettings
   If mOutputFolder = "" Then mOutputFolder = def_outputFolder
   OutputFolder = mOutputFolder
   If Right(OutputFolder, 1) <> "\" Then OutputFolder = OutputFolder & "\"
   OutputFolder = OutputFolder & OutputSubFolder(F)
-  If Dir(OutputFolder, vbDirectory) = "" Then MkDir OutputFolder
+  If Dir(OutputFolder, vbDirectory) = "" Then
+On Error GoTo CantMakeOutputFolder
+    MkDir OutputFolder
+  End If
+  Exit Function
+CantMakeOutputFolder:
+  If Not Hush Then MsgBox "Failed creating folder.  Perhaps create it yourself?" & vbCrLf & OutputFolder
 End Function
 
 Public Function AssemblyName() As String
@@ -56,15 +76,3 @@ Public Function OutputSubFolder(ByVal F As String) As String
     Case Else:   OutputSubFolder = ""
   End Select
 End Function
-
-Public Property Get vbpFile() As String
-  LoadSettings
-  If mVBPFile = "" Then mVBPFile = def_vbpFile
-  vbpFile = mVBPFile
-End Property
-
-Public Property Get vbpPath() As String
-  vbpPath = FilePath(vbpFile)
-End Property
-
-

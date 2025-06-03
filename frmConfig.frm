@@ -90,11 +90,17 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 Option Explicit
+' Config form
+
 
 Private Sub Form_Load()
-  txtVBPFile = modConfig.vbpFile
-  txtOutput = modConfig.OutputFolder
-  txtAssemblyName = modConfig.AssemblyName
+  modConfig.Hush = True
+  With Me
+    .txtVBPFile = modConfig.vbpFile
+    .txtOutput = modConfig.OutputFolder
+    .txtAssemblyName = modConfig.AssemblyName
+  End With
+  modConfig.Hush = False
 End Sub
 
 Private Sub cmdCancel_Click()
@@ -109,19 +115,26 @@ Private Sub cmdOK_Click()
   Unload Me
 End Sub
 
-Private Sub txtOutput_Validate(Cancel As Boolean)
+Private Sub fraConfig_DblClick()
+  If MsgBox("Reset to default?", vbOKCancel, "Config Reset") = vbCancel Then Exit Sub
+  txtVBPFile = App.Path & "\prj.vbp"
+  txtOutput = App.Path & "\quick"
+  txtAssemblyName = "VB2CS"
+End Sub
+
+Private Sub txtOutput_Validate(ByRef Cancel As Boolean)
   If Dir(txtOutput, vbDirectory) = "" Then
     MsgBox "Output folder does not exist.  Please create to prevent errors."
   End If
 End Sub
 
-Private Sub txtVBPFile_Validate(Cancel As Boolean)
+Private Sub txtVBPFile_Validate(ByRef Cancel As Boolean)
   If Dir(txtVBPFile) = "" Then
     MsgBox "Project file does not exist.  Please give a valid project to prevent errors."
   End If
 End Sub
 
-Private Sub txtAssemblyName_Validate(Cancel As Boolean)
+Private Sub txtAssemblyName_Validate(ByRef Cancel As Boolean)
   If txtAssemblyName = "" Then
     MsgBox "Please enter something for an assembly name."
   End If

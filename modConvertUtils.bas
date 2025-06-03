@@ -1,15 +1,18 @@
 Attribute VB_Name = "modConvertUtils"
 Option Explicit
 
+' Basic conversion utilities
+
 Private EOLComment As String
 Private mStrings As Collection
 Private nStringCnt As Long
 
 Private Const DeStringToken_Base1 As String = "STRING_"
 Private Const DeStringToken_Base2 As String = "TOKEN_"
-Private Const DeStringToken_Base As String = DeStringToken_Base1 & DeStringToken_Base2
+Public Const DeStringToken_Base As String = DeStringToken_Base1 & DeStringToken_Base2
 
 
+' remove any comment from line
 Public Function DeComment(ByVal Str As String, Optional ByVal Discard As Boolean = False) As String
   Dim A As Long
   Dim T As String, U As String
@@ -28,7 +31,8 @@ Public Function DeComment(ByVal Str As String, Optional ByVal Discard As Boolean
   DeComment = RTrim(Left(Str, A - 1))
 End Function
 
-Public Function ReComment(ByVal Str As String, Optional ByVal KeepVBComments As Boolean = False)
+' replace comments on line
+Public Function ReComment(ByVal Str As String, Optional ByVal KeepVBComments As Boolean = False) As String
   Dim C As String
   Dim Pr As String
   Pr = IIf(KeepVBComments, "'", "//")
@@ -43,15 +47,18 @@ Public Function ReComment(ByVal Str As String, Optional ByVal KeepVBComments As 
   If Left(LTrim(ReComment), 2) = Pr Then ReComment = LTrim(ReComment)
 End Function
 
+' initialize de stringing
 Public Sub InitDeString()
   Set mStrings = New Collection
   nStringCnt = 0
 End Sub
 
+' token for destringing
 Private Function DeStringToken(ByVal N As Long) As String
   DeStringToken = DeStringToken_Base & Format(N, "00000")
 End Function
 
+' destring a line.  destringing before
 Public Function DeString(ByVal S As String) As String
   Const Q As String = """"
   Dim Token As String
@@ -99,7 +106,7 @@ Public Function ReString(ByVal Str As String, Optional ByVal doConvertString As 
 End Function
 
 
-Private Function InternalConvertString(ByVal S As String)
+Private Function InternalConvertString(ByVal S As String) As String
   S = Replace(S, "\", "\\")
   S = Replace(S, """""", "\""")
   InternalConvertString = S
